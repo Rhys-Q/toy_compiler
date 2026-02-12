@@ -217,7 +217,9 @@ class Phi(Instruction):
         return [self.dst]
 
     def uses(self):
-        return list(self.incomings.values())
+        vars = list(self.incomings.values())
+        vars = [var for var in vars if isinstance(var, str)]
+        return vars
 
     def __str__(self):
         args = ", ".join(f"{bb.name}: {v}" for bb, v in self.incomings.items())

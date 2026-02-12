@@ -10,6 +10,7 @@ from toy_compiler.toy_ir.ssa import (
     print_dominance_frontier,
     insert_phi,
     rename_ssa,
+    verify_function,
 )
 from toy_compiler.toy_ir.transformers import constant_propagation, rewrite_constants, dce, simplify_cfg
 
@@ -96,15 +97,19 @@ def test_build_and_ssa():
     # rename ssa
     rename_ssa(func, dom_tree)
     print_function(func)
+    verify_function(func)
 
     # constant propagation
     rewrite_constants(func)
     print_function(func)
+    verify_function(func)
 
     dce(func)
     print_function(func)
+    verify_function(func)
 
     simplify_cfg(func)
     rewrite_constants(func)
     dce(func)
     print_function(func)
+    verify_function(func)

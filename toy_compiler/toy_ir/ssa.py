@@ -1,5 +1,5 @@
 from collections import defaultdict
-from toy_compiler.toy_ir.non_ssa_ir import Function, BasicBlock, Phi
+from toy_compiler.toy_ir.non_ssa_ir import Function, BasicBlock, Phi, Jump, Branch
 from collections import defaultdict
 
 
@@ -225,3 +225,59 @@ def rename_ssa(func: Function, dom_tree: dict):
             stack[v].pop()
 
     rename_block(func.entry)
+
+
+def verify_function(func: Function):
+    """Verify IR correctness"""
+    errors = []
+
+    # 1️⃣ CFG 检查
+    for bb in func.blocks:
+        if bb.terminator is None:
+            errors.append(f"Block {bb.name} has no terminator")
+
+        for succ in bb.succs:
+            if bb not in succ.preds:
+                errors.append(f"CFG inconsistency: {bb.name} -> {succ.name} missing back-edge")
+
+    # 2️⃣ SSA 检查：每个 lhs 唯一
+    seen_vars = set()
+    for bb in func.blocks:
+        for inst in bb.insts:
+            for v in inst.defs():
+                if v in seen_vars:
+                    errors.append(f"Variable {v} redefined in {bb.name}")
+                else:
+                    seen_vars.add(v)
+
+    # 3️⃣ Phi correctness
+    for bb in func.blocks:
+        for inst in bb.insts:
+            if isinstance(inst, Phi):
+                for pred_bb in inst.incomings:
+                    if pred_bb not in bb.preds:
+                        errors.append(f"Phi {inst.dst} in {bb.name} has incoming from non-pred {pred_bb}")
+
+    # 4️⃣ Uses check
+    defined_vars = set()
+    for bb in func.blocks:
+        for inst in bb.insts:
+            for v in inst.uses():
+                if v not in defined_vars:
+                    errors.append(f"Use of undefined variable {v} in {bb.name}")
+            defined_vars.update(inst.defs())
+
+    # 5️⃣ Terminator targets exist
+    for bb in func.blocks:
+        term = bb.terminator
+        if isinstance(term, Jump) and term.target not in func.blocks:
+            errors.append(f"Jump to non-existent block {term.target}")
+        if isinstance(term, Branch):
+            for target in [term.true_bb, term.false_bb]:
+                if target not in func.blocks:
+                    errors.append(f"Branch to non-existent block {target}")
+
+    if errors:
+        raise ValueError("IR Verification Failed:\n" + "\n".join(errors))
+    else:
+        print(f"Function {func.name} passed verification ✅")

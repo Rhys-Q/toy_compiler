@@ -98,14 +98,13 @@ def test_build_and_ssa():
     print_function(func)
 
     # constant propagation
-    const_env = constant_propagation(func)
-    print(const_env)
-
-    rewrite_constants(func, const_env)
+    rewrite_constants(func)
     print_function(func)
 
     dce(func)
     print_function(func)
 
     simplify_cfg(func)
+    rewrite_constants(func)
+    dce(func)
     print_function(func)

@@ -69,7 +69,9 @@ def rewrite_value(v, const_env):
     return v
 
 
-def rewrite_constants(func, const_env):
+def rewrite_constants(func):
+    const_env = constant_propagation(func)
+    constant_propagation
     for bb in func.blocks:
         # rewrite instructions
         new_insts = []

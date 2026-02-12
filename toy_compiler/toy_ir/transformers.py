@@ -106,3 +106,42 @@ def rewrite_constants(func, const_env):
         term = bb.terminator
         if isinstance(term, Return):
             term.ret = rewrite_value(term.ret, const_env)
+
+
+def build_def_map(func):
+    def_map = {}
+    for bb in func.blocks:
+        for inst in bb.insts:
+            for v in inst.defs():
+                def_map[v] = inst
+    return def_map
+
+
+def dce(func):
+    def_map = build_def_map(func)
+
+    from collections import deque
+
+    worklist = deque()
+    live_insts = set()
+
+    # roots
+    for bb in func.blocks:
+        if bb.terminator:
+            worklist.append(bb.terminator)
+            live_insts.add(bb.terminator)
+
+    # propagate
+    # 思路就是先将所有terminator加入live_insts，然后从这些inst开始，将所有uses的def_inst加入live_insts
+    while worklist:
+        inst = worklist.popleft()
+        for v in inst.uses():
+            if v in def_map:
+                def_inst = def_map[v]
+                if def_inst not in live_insts:
+                    live_insts.add(def_inst)
+                    worklist.append(def_inst)
+
+    # sweep
+    for bb in func.blocks:
+        bb.insts = [inst for inst in bb.insts if inst in live_insts]

@@ -205,6 +205,11 @@ def rename_ssa(func: Function, dom_tree: dict):
                 pushed.append(v)
                 inst.rename_def(v, new)
 
+        # 3. terminator
+        if bb.terminator:
+            for i, v in enumerate(bb.terminator.uses()):
+                bb.terminator.rename_use(v, cur_name(v))
+
         # 3. 处理succs中phi的incomings
         for succ in bb.succs:
             for inst in succ.insts:

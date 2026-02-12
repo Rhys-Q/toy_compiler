@@ -6,6 +6,8 @@ from toy_compiler.toy_ir.ssa import (
     print_idom,
     build_dominator_tree,
     print_dom_tree,
+    build_dominance_frontier,
+    print_dominance_frontier,
 )
 
 
@@ -76,3 +78,7 @@ def test_build_and_ssa():
     # build dom tree
     dom_tree = build_dominator_tree(func, idom)
     print_dom_tree(dom_tree, func.entry)
+
+    # build dominance frontier
+    df = build_dominance_frontier(func, idom)
+    print_dominance_frontier(df)

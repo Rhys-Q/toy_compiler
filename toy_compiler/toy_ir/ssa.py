@@ -112,3 +112,28 @@ def print_dom_tree(dom_tree, root, indent=0):
     print("  " * indent + root.name)
     for child in dom_tree.get(root, []):
         print_dom_tree(dom_tree, child, indent + 1)
+
+
+def build_dominance_frontier(func: Function, idom: dict):
+    # Cytron 算法
+    df = {}
+    # init
+    for b in func.blocks:
+        df[b] = set()
+
+    for b in func.blocks:
+        for p in b.preds:
+            runner = p
+
+            while runner != idom[b]:
+                df[runner].add(b)
+                runner = idom[runner]
+    return df
+
+
+def print_dominance_frontier(df):
+    for b, ds in df.items():
+        if ds:
+            print(f"df({b.name}) = {[d.name for d in ds]}")
+        else:
+            print(f"df({b.name}) = None")

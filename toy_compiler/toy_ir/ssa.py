@@ -1,5 +1,5 @@
 from collections import defaultdict
-from toy_compiler.toy_ir.non_ssa_ir import Assign, Function
+from toy_compiler.toy_ir.non_ssa_ir import Assign, Function, Instruction, BasicBlock
 from collections import defaultdict
 
 
@@ -137,3 +137,52 @@ def print_dominance_frontier(df):
             print(f"df({b.name}) = {[d.name for d in ds]}")
         else:
             print(f"df({b.name}) = None")
+
+
+class Phi(Instruction):
+    def __init__(self, dst: str, incomings: dict["BasicBlock", str]):
+        """
+        dst = φ(...)
+        incomings: {pred_bb: var_name}
+        """
+        self.dst = dst
+        self.incomings = incomings
+
+    def defs(self):
+        return [self.dst]
+
+    def uses(self):
+        return list(self.incomings.values())
+
+    def __str__(self):
+        args = ", ".join(f"{bb.name}: {v}" for bb, v in self.incomings.items())
+        return f"{self.dst} = phi({args})"
+
+
+def insert_phi(func: Function, df: dict):
+    # 1. 收集def blocks
+    def_blocks = {}
+    for bb in func.blocks:
+        for inst in bb.insts:
+            for v in inst.defs():
+                def_blocks.setdefault(v, set()).add(bb)
+
+    # 2. 对每个变量做phi 插入
+    for var, blocks in def_blocks.items():
+        worklist = list(blocks)
+        has_phi = set()
+
+        while worklist:
+            b = worklist.pop()
+
+            for y in df.get(b, []):
+                if y not in has_phi:
+                    # 在y的开头插入PHI
+                    incomings = {pred: var for pred in y.preds}
+                    phi = Phi(var, incomings)
+                    y.insts.insert(0, phi)
+                    has_phi.add(y)
+                    # phi 本身也是def
+                    if y not in blocks:
+                        blocks.add(y)
+                        worklist.append(y)

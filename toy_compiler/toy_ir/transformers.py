@@ -1,4 +1,4 @@
-from toy_compiler.toy_ir.non_ssa_ir import Function, Assign, BinaryOp, Phi, Return
+from toy_compiler.toy_ir.non_ssa_ir import Function, Assign, BinaryOp, Phi, Return, Branch, Jump, BasicBlock
 
 
 def eval_binary(op, a, b):
@@ -106,6 +106,8 @@ def rewrite_constants(func, const_env):
         term = bb.terminator
         if isinstance(term, Return):
             term.ret = rewrite_value(term.ret, const_env)
+        elif isinstance(term, Branch):
+            term.cond = rewrite_value(term.cond, const_env)
 
 
 def build_def_map(func):
@@ -145,3 +147,146 @@ def dce(func):
     # sweep
     for bb in func.blocks:
         bb.insts = [inst for inst in bb.insts if inst in live_insts]
+
+
+def fold_constant_branches(func: Function) -> bool:
+    changed = False
+
+    for bb in func.blocks:
+        term = bb.terminator
+        if isinstance(term, Branch) and isinstance(term.cond, int):
+            target = term.true_bb if term.cond else term.false_bb
+
+            # 替换 terminator
+            bb.terminator = Jump(target)
+
+            # 修 CFG
+            for succ in bb.succs:
+                succ.preds.remove(bb)
+            bb.succs = [target]
+            target.preds.append(bb)
+
+            changed = True
+
+    return changed
+
+
+def remove_unreachable_blocks(func: Function) -> bool:
+    reachable = set()
+    worklist = [func.entry]
+
+    while worklist:
+        bb = worklist.pop()
+        if bb in reachable:
+            continue
+        reachable.add(bb)
+        worklist.extend(bb.succs)
+
+    removed = False
+    new_blocks = []
+
+    for bb in func.blocks:
+        if bb in reachable:
+            new_blocks.append(bb)
+        else:
+            # 从 preds / succs 里清掉
+            for p in bb.preds:
+                p.succs.remove(bb)
+            for s in bb.succs:
+                s.preds.remove(bb)
+            removed = True
+
+    func.blocks = new_blocks
+    return removed
+
+
+def has_phi(bb: BasicBlock) -> bool:
+    return any(isinstance(inst, Phi) for inst in bb.insts)
+
+
+def can_merge(A: BasicBlock, B: BasicBlock) -> bool:
+    return (
+        isinstance(A.terminator, Jump)
+        and A.terminator.target is B
+        and len(A.succs) == 1
+        and len(B.preds) == 1
+        and not has_phi(B)
+    )
+
+
+def merge_trivial_blocks(func: Function) -> bool:
+    for A in list(func.blocks):
+        if not isinstance(A.terminator, Jump):
+            continue
+
+        B = A.terminator.target
+        if not can_merge(A, B):
+            continue
+
+        # 1. 删除 A 的 terminator
+        A.terminator = None
+
+        # 2. 拼接 B 的指令
+        for inst in B.insts:
+            A.insts.append(inst)
+        A.terminator = B.terminator
+
+        # 3. 修 CFG
+        A.succs = B.succs
+        for succ in B.succs:
+            succ.preds.remove(B)
+            succ.preds.append(A)
+
+        # 4. 删除 B
+        func.blocks.remove(B)
+
+        return True  # 一次只合并一个，回到外层循环
+
+    return False
+
+
+def cleanup_phi_nodes(func: Function) -> bool:
+    changed = False
+
+    for bb in func.blocks:
+        new_insts = []
+        for inst in bb.insts:
+            if not isinstance(inst, Phi):
+                new_insts.append(inst)
+                continue
+
+            # 1. 删除来自不存在 predecessor 的 incoming
+            inst.incomings = {p: v for p, v in inst.incomings.items() if p in bb.preds}
+
+            # 2. 只有一个 incoming
+            values = list(inst.incomings.values())
+            if len(values) == 1:
+                new_insts.append(Assign(inst.dst, values[0]))
+                changed = True
+                continue
+
+            # 3. 所有 incoming 值相同
+            if len(set(values)) == 1:
+                new_insts.append(Assign(inst.dst, values[0]))
+                changed = True
+                continue
+
+            new_insts.append(inst)
+
+        bb.insts = new_insts
+
+    return changed
+
+
+def simplify_cfg(func: Function):
+
+    changed = True
+
+    while changed:
+
+        changed = False
+
+        changed |= fold_constant_branches(func)
+        changed |= remove_unreachable_blocks(func)
+        changed |= merge_trivial_blocks(func)
+        changed |= cleanup_phi_nodes(func)

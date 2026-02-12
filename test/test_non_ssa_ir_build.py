@@ -11,7 +11,7 @@ from toy_compiler.toy_ir.ssa import (
     insert_phi,
     rename_ssa,
 )
-from toy_compiler.toy_ir.transformers import constant_propagation, rewrite_constants, dce
+from toy_compiler.toy_ir.transformers import constant_propagation, rewrite_constants, dce, simplify_cfg
 
 
 def build_complex_function():
@@ -105,4 +105,7 @@ def test_build_and_ssa():
     print_function(func)
 
     dce(func)
+    print_function(func)
+
+    simplify_cfg(func)
     print_function(func)

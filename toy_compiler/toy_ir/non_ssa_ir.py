@@ -144,7 +144,7 @@ class Jump(Terminator):
 
         bb: 跳转目标 BasicBlock
         """
-        self.bb = bb
+        self.target = bb
 
     def defs(self) -> list[str]:
         # Jump 不定义任何变量
@@ -164,10 +164,10 @@ class Jump(Terminator):
         """
         CFG 边的来源
         """
-        return [self.bb]
+        return [self.target]
 
     def __str__(self) -> str:
-        return f"jump {self.bb.name}"
+        return f"jump {self.target.name}"
 
 
 class Return(Terminator):

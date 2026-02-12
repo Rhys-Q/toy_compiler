@@ -1,36 +1,67 @@
 from toy_compiler.toy_ir.non_ssa_ir import IRBuilder, Function, Assign, Branch, Jump, Return, print_function, BinaryOp
-from toy_compiler.toy_ir.ssa import compute_dominator_sets, print_dominators
+from toy_compiler.toy_ir.ssa import compute_dominator_sets, print_dominators, compute_idom, print_idom
 
 
-def test_build_and_ssa():
-    func = Function("add")
+def build_complex_function():
+    func = Function("complex")
+
     entry = func.new_block("entry")
-    then = func.new_block("then")
+    A = func.new_block("A")
+    split = func.new_block("split")
+    B = func.new_block("B")
+    C = func.new_block("C")
+    D = func.new_block("D")
     end = func.new_block("end")
 
     builder = IRBuilder(func)
 
-    # entry block
+    # entry
     builder.set_block(entry)
     builder.emit(Assign("x", 0))
-    builder.emit(Assign("c", 1))  # <- 定义条件
-    builder.emit_terminator(Branch("c", then, end))
+    builder.emit_terminator(Jump(A))
 
-    # then block
-    builder.set_block(then)
+    # A
+    builder.set_block(A)
     builder.emit(Assign("x", 1))
+    builder.emit_terminator(Jump(split))
+
+    # split
+    builder.set_block(split)
+    builder.emit(Assign("c", 1))
+    builder.emit_terminator(Branch("c", B, C))
+
+    # B
+    builder.set_block(B)
+    builder.emit(Assign("x", 2))
+    builder.emit_terminator(Jump(D))
+
+    # C
+    builder.set_block(C)
+    builder.emit(Assign("x", 3))
+    builder.emit_terminator(Jump(D))
+
+    # D
+    builder.set_block(D)
+    builder.emit(BinaryOp("add", "y", "x", 1))
     builder.emit_terminator(Jump(end))
 
-    # end block
+    # end
     builder.set_block(end)
-    builder.emit(BinaryOp("add", "z", "x", "1"))
-    builder.emit_terminator(Return("x"))
+    builder.emit_terminator(Return("y"))
 
-    # build cfg
     func.build_cfg()
+    return func
+
+
+def test_build_and_ssa():
+    func = build_complex_function()
 
     print_function(func)
 
     # calcuate dom
     dom = compute_dominator_sets(func)
     print_dominators(dom)
+
+    # calcuate idom
+    idom = compute_idom(func, dom)
+    print_idom(idom)

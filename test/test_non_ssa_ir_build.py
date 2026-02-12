@@ -11,6 +11,7 @@ from toy_compiler.toy_ir.ssa import (
     insert_phi,
     rename_ssa,
 )
+from toy_compiler.toy_ir.transformers import constant_propagation, rewrite_constants
 
 
 def build_complex_function():
@@ -54,6 +55,8 @@ def build_complex_function():
     # D
     builder.set_block(D)
     builder.emit(BinaryOp("add", "y", "x", 1))
+    builder.emit(Assign("z", 1))
+    builder.emit(BinaryOp("add", "k", "z", 1))
     builder.emit_terminator(Jump(end))
 
     # end
@@ -92,4 +95,11 @@ def test_build_and_ssa():
 
     # rename ssa
     rename_ssa(func, dom_tree)
+    print_function(func)
+
+    # constant propagation
+    const_env = constant_propagation(func)
+    print(const_env)
+
+    rewrite_constants(func, const_env)
     print_function(func)

@@ -204,6 +204,26 @@ class Return(Terminator):
         return f"return {self.ret}"
 
 
+class Phi(Instruction):
+    def __init__(self, dst: str, incomings: dict["BasicBlock", str]):
+        """
+        dst = φ(...)
+        incomings: {pred_bb: var_name}
+        """
+        self.dst = dst
+        self.incomings = incomings
+
+    def defs(self):
+        return [self.dst]
+
+    def uses(self):
+        return list(self.incomings.values())
+
+    def __str__(self):
+        args = ", ".join(f"{bb.name}: {v}" for bb, v in self.incomings.items())
+        return f"{self.dst} = phi({args})"
+
+
 @dataclass
 class BasicBlock:
     name: str

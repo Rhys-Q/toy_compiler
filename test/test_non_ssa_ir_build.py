@@ -1,5 +1,12 @@
 from toy_compiler.toy_ir.non_ssa_ir import IRBuilder, Function, Assign, Branch, Jump, Return, print_function, BinaryOp
-from toy_compiler.toy_ir.ssa import compute_dominator_sets, print_dominators, compute_idom, print_idom
+from toy_compiler.toy_ir.ssa import (
+    compute_dominator_sets,
+    print_dominators,
+    compute_idom,
+    print_idom,
+    build_dominator_tree,
+    print_dom_tree,
+)
 
 
 def build_complex_function():
@@ -65,3 +72,7 @@ def test_build_and_ssa():
     # calcuate idom
     idom = compute_idom(func, dom)
     print_idom(idom)
+
+    # build dom tree
+    dom_tree = build_dominator_tree(func, idom)
+    print_dom_tree(dom_tree, func.entry)

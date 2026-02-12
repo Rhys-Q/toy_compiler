@@ -1,5 +1,6 @@
 from collections import defaultdict
 from toy_compiler.toy_ir.non_ssa_ir import Assign, Function
+from collections import defaultdict
 
 
 def compute_dominator_sets(func: Function):
@@ -91,3 +92,23 @@ def print_idom(idom):
             print(f"idom({b.name}) = None")
         else:
             print(f"idom({b.name}) = {d.name}")
+
+
+def build_dominator_tree(func: Function, idom: dict):
+    """
+    返回:
+        dom_tree: dict[BasicBlock, list[BasicBlock]]
+    """
+    dom_tree = defaultdict(list)
+
+    for b, parent in idom.items():
+        if parent is not None:
+            dom_tree[parent].append(b)
+
+    return dom_tree
+
+
+def print_dom_tree(dom_tree, root, indent=0):
+    print("  " * indent + root.name)
+    for child in dom_tree.get(root, []):
+        print_dom_tree(dom_tree, child, indent + 1)

@@ -9,6 +9,7 @@ from toy_compiler.toy_ir.ssa import (
     build_dominance_frontier,
     print_dominance_frontier,
     insert_phi,
+    rename_ssa,
 )
 
 
@@ -87,4 +88,8 @@ def test_build_and_ssa():
     # insert phi
     insert_phi(func, df)
 
+    print_function(func)
+
+    # rename ssa
+    rename_ssa(func, dom_tree)
     print_function(func)

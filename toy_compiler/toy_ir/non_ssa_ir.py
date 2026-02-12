@@ -16,6 +16,12 @@ class Instruction(ABC):
         """
         raise NotImplementedError
 
+    def rename_def(self, old, new):
+        raise NotImplementedError
+
+    def rename_use(self, old, new):
+        raise NotImplementedError
+
     def __str__(self) -> str:
         """
         IR 打印形式，用于 debug
@@ -40,6 +46,14 @@ class Assign(Instruction):
         if isinstance(self.rhs, str):
             return [self.rhs]
         return []
+
+    def rename_def(self, old, new):
+        if self.lhs == old:
+            self.lhs = new
+
+    def rename_use(self, old, new):
+        if isinstance(self.rhs, str) and self.rhs == old:
+            self.rhs = new
 
     def __str__(self) -> str:
         return f"{self.lhs} = {self.rhs}"
@@ -67,6 +81,16 @@ class BinaryOp(Instruction):
         if isinstance(self.src2, str):
             outs.append(self.src2)
         return outs
+
+    def rename_def(self, old, new):
+        if self.dst == old:
+            self.dst = new
+
+    def rename_use(self, old, new):
+        if self.src1 == old:
+            self.src1 = new
+        if self.src2 == old:
+            self.src2 = new
 
     def __str__(self) -> str:
         return f"{self.dst} = {self.src1} {self.op} {self.src2}"
@@ -96,6 +120,13 @@ class Branch(Terminator):
         # 使用条件变量
         return [self.cond]
 
+    def rename_def(self, old, new):
+        pass
+
+    def rename_use(self, old, new):
+        if self.cond == old:
+            self.cond = new
+
     def successors(self):
         """
         CFG 边的来源
@@ -123,6 +154,12 @@ class Jump(Terminator):
         # Jump 不使用任何变量
         return []
 
+    def rename_def(self, old, new):
+        pass
+
+    def rename_use(self, old, new):
+        pass
+
     def successors(self):
         """
         CFG 边的来源
@@ -149,6 +186,13 @@ class Return(Terminator):
     def uses(self) -> list[str]:
         # Return 不使用任何变量
         return [self.ret] if isinstance(self.ret, str) else []
+
+    def rename_def(self, old, new):
+        pass
+
+    def rename_use(self, old, new):
+        if isinstance(self.ret, str) and self.ret == old:
+            self.ret = new
 
     def successors(self):
         """

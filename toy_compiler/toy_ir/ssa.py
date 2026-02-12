@@ -186,3 +186,57 @@ def insert_phi(func: Function, df: dict):
                     if y not in blocks:
                         blocks.add(y)
                         worklist.append(y)
+
+
+def rename_ssa(func: Function, dom_tree: dict):
+    version = defaultdict(int)
+    stack = defaultdict(list)
+
+    def new_name(var):
+        i = version[var]
+        version[var] += 1
+        name = f"{var}_{i}"
+        stack[var].append(name)
+        return name
+
+    def cur_name(var):
+        return stack[var][-1]
+
+    def rename_block(bb: BasicBlock):
+        pushed = []  # 记录block新定义了哪些变量，用于回溯
+        # 1. phi的defs
+        for inst in bb.insts:
+            if isinstance(inst, Phi):
+                new = new_name(inst.dst)
+                pushed.append(inst.dst)
+                inst.dst = new
+
+        # 2. 普通指令
+        for inst in bb.insts:
+            if isinstance(inst, Phi):
+                continue
+
+            # rename uses
+            for i, v in enumerate(inst.uses()):
+                inst.rename_use(v, cur_name(v))
+            # rename defs
+            for v in inst.defs():
+                new = new_name(v)
+                pushed.append(v)
+                inst.rename_def(v, new)
+
+        # 3. 处理succs中phi的incomings
+        for succ in bb.succs:
+            for inst in succ.insts:
+                if isinstance(inst, Phi):
+                    orig = inst.incomings[bb]
+                    inst.incomings[bb] = cur_name(orig)
+
+        # 4. DFS dominator tree
+        for child in dom_tree.get(bb, []):
+            rename_block(child)
+        # 5. 回溯
+        for v in reversed(pushed):
+            stack[v].pop()
+
+    rename_block(func.entry)

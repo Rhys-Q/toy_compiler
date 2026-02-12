@@ -24,25 +24,25 @@ class Instruction(ABC):
 
 
 class Assign(Instruction):
-    def __init__(self, dst: str, src: str | int):
+    def __init__(self, lhs: str, rhs: str | int):
         """
-        dst = src
-        src 可以是变量名（str）或常量（int），因为是toy，所以只考虑这两种情况
+        lhs = rhs
+        rhs 可以是变量名（str）或常量（int），因为是toy，所以只考虑这两种情况
         """
-        self.dst = dst
-        self.src = src
+        self.lhs = lhs
+        self.rhs = rhs
 
     def defs(self) -> list[str]:
-        return [self.dst]
+        return [self.lhs]
 
     def uses(self) -> list[str]:
         # 常量不算 use
-        if isinstance(self.src, str):
-            return [self.src]
+        if isinstance(self.rhs, str):
+            return [self.rhs]
         return []
 
     def __str__(self) -> str:
-        return f"{self.dst} = {self.src}"
+        return f"{self.lhs} = {self.rhs}"
 
 
 class BinaryOp(Instruction):
@@ -168,6 +168,12 @@ class BasicBlock:
     succs: list["BasicBlock"] = field(default_factory=list)
     preds: list["BasicBlock"] = field(default_factory=list)
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return isinstance(other, BasicBlock) and self.name == other.name
+
 
 @dataclass
 class Function:
@@ -178,6 +184,8 @@ class Function:
     def new_block(self, name: str) -> BasicBlock:
         bb = BasicBlock(name, None, [])
         self.blocks.append(bb)
+        if self.entry is None:
+            self.entry = bb
         return bb
 
     def build_cfg(self):

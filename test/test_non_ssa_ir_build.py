@@ -1,7 +1,8 @@
 from toy_compiler.toy_ir.non_ssa_ir import IRBuilder, Function, Assign, Branch, Jump, Return, print_function, BinaryOp
+from toy_compiler.toy_ir.ssa import compute_dominator_sets, print_dominators
 
 
-def test_build():
+def test_build_and_ssa():
     func = Function("add")
     entry = func.new_block("entry")
     then = func.new_block("then")
@@ -29,3 +30,7 @@ def test_build():
     func.build_cfg()
 
     print_function(func)
+
+    # calcuate dom
+    dom = compute_dominator_sets(func)
+    print_dominators(dom)

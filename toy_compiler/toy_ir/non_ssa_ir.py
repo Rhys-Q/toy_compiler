@@ -97,7 +97,11 @@ class BinaryOp(Instruction):
 
 
 class Terminator(Instruction):
-    pass
+    def successors(self) -> list["BasicBlock"]:
+        """
+        CFG 边的目标
+        """
+        raise NotImplementedError
 
 
 class Branch(Terminator):

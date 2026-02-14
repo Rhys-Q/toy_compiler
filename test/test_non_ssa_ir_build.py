@@ -84,13 +84,13 @@ def test_build_and_ssa():
     # build dom tree
     dom_tree = build_dominator_tree(func, idom)
     print_dom_tree(dom_tree, func.entry)
-    return
 
     # build dominance frontier
     df = build_dominance_frontier(func, idom)
     print_dominance_frontier(df)
 
     # insert phi
+    print_function(func)
     insert_phi(func, df)
 
     print_function(func)

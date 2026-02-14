@@ -109,9 +109,9 @@ def build_dominator_tree(func: Function, idom: dict):
 
 
 def print_dom_tree(dom_tree, root, indent=0):
-    print("  " * indent + root.name)
+    print(" " * indent + root.name)
     for child in dom_tree.get(root, []):
-        print_dom_tree(dom_tree, child, indent + 1)
+        print_dom_tree(dom_tree, child, indent + 1 + len(root.name))
 
 
 def build_dominance_frontier(func: Function, idom: dict):
